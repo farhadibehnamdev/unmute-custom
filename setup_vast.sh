@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting Vast.ai setup..."
+echo "Starting Vast.ai setup (Docker Compose edition)..."
 
 # 1. System Updates & Dependencies
 echo "Installing dependencies..."
@@ -38,17 +38,9 @@ fi
 
 # 5. Configure Docker for GPUs
 echo "Configuring Docker for GPUs..."
-# Ensure PyYAML/setup deps are installed for the python script if needed, 
-# but setup_gpu_swarm_node.py only uses standard lib (json, subprocess, pathlib).
 python3 setup_gpu_swarm_node.py
 
-# 6. Initialize Swarm
-if ! docker info | grep -q "Swarm: active"; then
-    echo "Initializing Docker Swarm..."
-    docker swarm init --advertise-addr $(hostname -i)
-fi
-
-# 7. Configuration Prompts
+# 6. Configuration Prompts
 read -p "Enter your Domain (e.g., green4lifeever.dpdns.org): " DOMAIN
 read -p "Enter your Hugging Face Token (Read Only): " HUGGING_FACE_HUB_TOKEN
 # Optional: Model selection
@@ -56,26 +48,22 @@ read -p "Enter LLM Model (default: mistralai/Mistral-Small-24B-Instruct-2501): "
 KYUTAI_LLM_MODEL=${KYUTAI_LLM_MODEL:-mistralai/Mistral-Small-24B-Instruct-2501}
 # Optional: News API
 read -p "Enter NewsAPI Key (optional, press enter to skip): " NEWSAPI_API_KEY
+if [ -z "$NEWSAPI_API_KEY" ]; then
+    NEWSAPI_API_KEY=""
+fi
 
 export DOMAIN
 export HUGGING_FACE_HUB_TOKEN
 export KYUTAI_LLM_MODEL
 export NEWSAPI_API_KEY
-# Set defaults for other env vars used in vast-deploy.yml if necessary
-# We'll just export them.
 
 echo "Environment Variables Set:"
 echo "DOMAIN: $DOMAIN"
 echo "LLM: $KYUTAI_LLM_MODEL"
 
-# 8. Build Images
-echo "Building Docker images... (This may take a while)"
-# We use docker compose build because 'stack deploy' doesn't build
-docker compose -f vast-deploy.yml build
+# 7. Build and Deploy
+echo "Building and Starting containers with Docker Compose..."
+# Use the production compose file
+docker compose -f docker-compose.prod.yml up -d --build
 
-# 9. Deploy
-echo "Deploying to Swarm..."
-docker stack deploy -c vast-deploy.yml unmute
-
-echo "Deployment submitted! Check status with: docker service ls"
-echo "If this is the first run, it might take some time for images to start and certificates to generate."
+echo "Deployment submitted! Check logs with: docker compose -f docker-compose.prod.yml logs -f"

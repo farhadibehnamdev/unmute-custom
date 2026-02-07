@@ -1,6 +1,6 @@
-# Deploying Unmute on Vast.ai
+# Deploying Unmute on Vast.ai (Docker Compose)
 
-This guide walks you through deploying the Unmute application on a GPU instance from Vast.ai using your custom domain.
+This guide walks you through deploying the Unmute application on a GPU instance from Vast.ai using **Docker Compose** and your custom domain.
 
 ## Prerequisites
 
@@ -25,9 +25,18 @@ This guide walks you through deploying the Unmute application on a GPU instance 
 
 ## Step 2: Configure DNS
 
-1.  Once the instance is running, copy its **Public IP Address**.
-2.  Go to your DNS provider (for `green4lifeever.dpdns.org`).
-3.  Create/Update an **A Record** pointing to the Vast.ai Instance IP.
+If you are using **Cloudflare** for DNS management:
+1.  Log in to your Cloudflare dashboard.
+2.  Select your domain.
+3.  Go to **DNS** > **Records**.
+4.  Add a new record:
+    - **Type**: `A`
+    - **Name**: `green4lifeever` (or `@` for root domain)
+    - **IPv4 address**: The **Public IP Address** of your Vast.ai instance (e.g., `123.45.67.89`).
+    - **Proxy status**: Start with **DNS only** (Gray cloud icon) to ensure Let's Encrypt can certify the domain first. You can switch to **Proxied** (Orange cloud) later if needed, but be aware of timeouts with long-running connections (like WebSocket). For this app, **DNS Only** is safer to avoid issues.
+5.  Save the record.
+
+If you are using another provider, look for **A Record** settings.
 
 ## Step 3: Connect via SSH
 
@@ -57,15 +66,32 @@ Run the following commands on the Vast.ai instance:
     - Enter your Hugging Face Token.
     - (Optional) Enter specific LLM model or NewsAPI key.
 
-4.  **Wait for Build and Deploy**:
-    - The script will install dependencies, build Docker images locally (this takes time!), and deploy the swarm.
+4.  **Wait for Build and Start**:
+    - The script will build images locally and start them with Docker Compose. This might take 10-20 minutes depending on download speeds.
 
-## Step 5: Verification
+## Step 5: Verification and Management
 
 1.  Wait a few minutes for the services to start and SSL certificates to generate.
 2.  Visit `https://green4lifeever.dpdns.org` in your browser.
-3.  Check status on the server:
-    ```bash
-    docker service ls
-    docker service logs -f unmute_frontend
-    ```
+  
+### Managing the App
+
+To see running containers:
+```bash
+docker compose -f docker-compose.prod.yml ps
+```
+
+To see logs:
+```bash
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+To restart services:
+```bash
+docker compose -f docker-compose.prod.yml restart
+```
+
+To stop everything:
+```bash
+docker compose -f docker-compose.prod.yml down
+```
